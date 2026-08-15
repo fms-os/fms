@@ -1,0 +1,31 @@
+{
+  "summary": "Iteration 2 post-MVP reconciliation testing (backend + frontend). All 25 pytest backend tests pass: public site-config seeded with correct defaults, public projects/artists/news correctly filter by VERIFIED_* + public/published, 7 NOT_CONNECTED integrations intact, OS auth gates return 401, project/artist/news PATCH with VERIFIED_* toggles visibility, invalid verification_status returns 400, /os/site-config PUT is upsert. Frontend verified: Home no longer shows 50+/200+/15+/10+ or the 4 hardcoded projects, realizations-empty state renders; /projects, /artists, /news, /studio empty states + placeholders render; /about renders from site-config. OS: sidebar has os-nav-cms-site and os-nav-actus, CMS editor loads, dirty-tracking enables save, News CRUD + publish/verify controls work, Projects can be created without 'type' and row-verify-/row-publish- controls exist.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/iteration_2.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "No DELETE endpoint for artists — cleanup requires unpublish only; consider adding DELETE /api/os/artists/{id} (soft archive) for symmetry with projects.",
+    "GET /api/os/projects returns archived items (uses generic _list). Consider filtering archived:{$ne:true} to hide soft-deleted rows from the OS table (currently TEST_ archived projects still show up in the UI list).",
+    "Public /studio page: hero_image_url in site-config is still an Unsplash URL (seeded). It's a hero image, not the Studio photo, and Studio page correctly shows 'Photo à venir' — but consider whether seeding an external Unsplash hero image aligns with the 'no invented public claims' policy. Founder may want to replace it via CMS.",
+    "server.py is 925 lines — approaching the 700-line threshold; consider splitting into routers/models modules for maintainability.",
+    "public/newsletter and public/leads have no rate-limiting — potential abuse vector; not blocking."
+  ],
+  "updated_files": [
+    "/app/backend/tests/backend_test.py"
+  ],
+  "success_rate": { "backend": "100% (25/25)", "frontend": "100%" },
+  "test_credentials": "Founder anbatolmq@gmail.com / FactoryMaker2026! (works, JWT + httpOnly cookie)",
+  "seed_data_creation": "Created and cleaned up: TEST_ProjectReconcile, TEST_UIProject (both archived), TEST_News1 (deleted), TEST_UITitle (deleted via UI), TEST_Artist (unpublished — no artist DELETE endpoint available).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iteration 2 fully passes. Public endpoints correctly hide non-verified data. Note that GET /os/projects returns archived items (no filter), so TEST_ archived rows may linger in the OS list — this does NOT affect public endpoints. Also, /os/artists lacks a DELETE endpoint — one TEST_Artist row may remain (unpublished, hidden from public).",
+  "rca of the issue": "N/A — no bugs detected."
+}

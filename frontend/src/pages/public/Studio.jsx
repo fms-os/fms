@@ -1,6 +1,9 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import api from "../../lib/api";
 export default function Studio() {
+  const [cfg, setCfg] = useState({});
+  useEffect(() => { api.get("/public/site-config").then((r) => setCfg(r.data || {})); }, []);
   return (
     <div className="pt-32 pb-24 px-6 lg:px-10 bg-white">
       <div className="mx-auto max-w-[1400px] grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
@@ -11,9 +14,21 @@ export default function Studio() {
           <p className="text-neutral-600 text-sm mb-8">12/14 avenue les Tridents · Bâtiment C · Local 12 · 97200 Fort-de-France</p>
           <Link to="/booking" className="inline-flex items-center gap-2 bg-[#D4AF37] hover:bg-[#c19c2c] text-black px-6 py-3 rounded-full public-eyebrow transition-colors">Réserver le studio</Link>
         </div>
-        <div className="aspect-[4/3] rounded-lg overflow-hidden bg-neutral-100">
-          <img src="https://images.unsplash.com/photo-1616588589676-62b3bd4ff6d2?w=1600&q=80" alt="Studio" className="w-full h-full object-cover" />
-        </div>
+        {cfg.studio_photo_url ? (
+          <div>
+            <div className="aspect-[4/3] rounded-lg overflow-hidden bg-neutral-100">
+              <img src={cfg.studio_photo_url} alt={cfg.studio_photo_caption || "Studio FMS"} className="w-full h-full object-cover" />
+            </div>
+            {cfg.studio_photo_caption && <div className="text-xs text-neutral-500 mt-2 uppercase tracking-wider">{cfg.studio_photo_caption}</div>}
+          </div>
+        ) : (
+          <div className="aspect-[4/3] rounded-lg border border-dashed border-neutral-300 bg-neutral-50 flex items-center justify-center">
+            <div className="text-center px-6">
+              <div className="public-serif text-2xl text-neutral-800 mb-2">Photo à venir.</div>
+              <p className="text-sm text-neutral-500">Nous n'affichons pas de photo générique. Les images réelles du studio arriveront prochainement.</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

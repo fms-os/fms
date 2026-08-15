@@ -3,7 +3,38 @@ import api, { formatApiError } from "../../lib/api";
 import { toast } from "sonner";
 import { Plus, X } from "lucide-react";
 
-function EntityPage({ title, endpoint, columns, fields, testKey }) {
+const VERIFICATION_OPTIONS = ["UNVERIFIED", "CONCEPT", "PLANNED", "IN_PROGRESS", "VERIFIED_CURRENT", "VERIFIED_COMPLETED", "VERIFIED_RELEASED"];
+
+function PublishControls({ row, endpoint, reload }) {
+  const [pub, setPub] = useState(!!row.public);
+  const [status, setStatus] = useState(row.verification_status || "UNVERIFIED");
+  const [saving, setSaving] = useState(false);
+  const patch = async (data) => {
+    setSaving(true);
+    try {
+      await api.patch(`${endpoint}/${row.id}`, data);
+      toast.success("Mis à jour.");
+      reload();
+    } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); }
+    finally { setSaving(false); }
+  };
+  return (
+    <div className="flex items-center gap-2">
+      <select value={status} disabled={saving} data-testid={`row-verify-${row.id}`}
+        onChange={(e) => { setStatus(e.target.value); patch({ verification_status: e.target.value }); }}
+        className="text-[11px] px-2 py-1 border border-neutral-300 rounded bg-white os-mono">
+        {VERIFICATION_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+      </select>
+      <button onClick={() => { const v = !pub; setPub(v); patch({ public: v }); }} disabled={saving}
+        data-testid={`row-publish-${row.id}`}
+        className={`text-[10px] uppercase tracking-wider px-2.5 py-1 rounded transition-colors ${pub ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200"}`}>
+        {pub ? "Publié" : "Privé"}
+      </button>
+    </div>
+  );
+}
+
+function EntityPage({ title, endpoint, columns, fields, testKey, extraColumns }) {
   const [items, setItems] = useState([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({});
@@ -63,15 +94,19 @@ function EntityPage({ title, endpoint, columns, fields, testKey }) {
       <div className="os-card overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-neutral-50 border-b border-neutral-200">
-            <tr>{columns.map((c) => <th key={c.key} className="text-left px-4 py-3 os-data-label">{c.label}</th>)}</tr>
+            <tr>
+              {columns.map((c) => <th key={c.key} className="text-left px-4 py-3 os-data-label">{c.label}</th>)}
+              {extraColumns?.map((c, i) => <th key={`ex-${i}`} className="text-left px-4 py-3 os-data-label">{c.label}</th>)}
+            </tr>
           </thead>
           <tbody>
             {items.length === 0 && (
-              <tr><td colSpan={columns.length} className="px-4 py-10 text-center text-neutral-400 text-sm">Aucune donnée. Créez le premier enregistrement.</td></tr>
+              <tr><td colSpan={columns.length + (extraColumns?.length || 0)} className="px-4 py-10 text-center text-neutral-400 text-sm">Aucune donnée. Créez le premier enregistrement.</td></tr>
             )}
             {items.map((it) => (
               <tr key={it.id} className="border-b border-neutral-100 hover:bg-neutral-50 transition-colors">
                 {columns.map((c) => <td key={c.key} className="px-4 py-3 text-neutral-800">{c.render ? c.render(it) : (it[c.key] ?? "—")}</td>)}
+                {extraColumns?.map((c, i) => <td key={`ex-${i}`} className="px-4 py-3">{c.render(it, load)}</td>)}
               </tr>
             ))}
           </tbody>
@@ -86,17 +121,26 @@ export function Projects() {
     columns={[
       { key: "name", label: "Nom" },
       { key: "type", label: "Type" },
+      { key: "year", label: "Année" },
+      { key: "role", label: "Rôle FMS" },
       { key: "status", label: "Statut" },
       { key: "deadline", label: "Deadline" },
-      { key: "budget", label: "Budget", render: (r) => r.budget ? `${r.budget} €` : "—" },
+    ]}
+    extraColumns={[
+      { label: "Publication", render: (row, reload) => <PublishControls row={row} endpoint="/os/projects" reload={reload} /> },
     ]}
     fields={[
       { key: "name", label: "Nom du projet", required: true },
       { key: "type", label: "Type", type: "select", options: ["music", "video", "photo", "campaign", "event", "brand", "artist_development", "release", "documentary", "other"] },
-      { key: "status", label: "Statut", type: "select", options: ["idea", "brief", "scoping", "quote", "approval", "scheduled", "production", "post_production", "review", "final", "delivery", "archived"] },
+      { key: "year", label: "Année", type: "number" },
+      { key: "role", label: "Rôle FMS (ex: production, mix, video)" },
+      { key: "status", label: "Statut interne", type: "select", options: ["idea", "brief", "scoping", "quote", "approval", "scheduled", "production", "post_production", "review", "final", "delivery", "archived"] },
+      { key: "verification_status", label: "Verification", type: "select", options: VERIFICATION_OPTIONS },
       { key: "start_date", label: "Début", type: "date" },
       { key: "deadline", label: "Deadline", type: "date" },
       { key: "budget", label: "Budget (€)", type: "number" },
+      { key: "cover_url", label: "URL image de couverture" },
+      { key: "external_url", label: "Lien externe (YouTube, etc.)" },
       { key: "description", label: "Description", type: "textarea" },
     ]}
   />;
@@ -108,7 +152,10 @@ export function Artists() {
       { key: "stage_name", label: "Nom de scène" },
       { key: "genre", label: "Genre" },
       { key: "territory", label: "Territoire" },
-      { key: "status", label: "Stade" },
+      { key: "status", label: "Stade A&R" },
+    ]}
+    extraColumns={[
+      { label: "Publication", render: (row, reload) => <PublishControls row={row} endpoint="/os/artists" reload={reload} /> },
     ]}
     fields={[
       { key: "stage_name", label: "Nom de scène", required: true },
@@ -116,7 +163,12 @@ export function Artists() {
       { key: "territory", label: "Territoire" },
       { key: "email", label: "Email", type: "email" },
       { key: "phone", label: "Téléphone" },
-      { key: "status", label: "Stade", type: "select", options: ["discovery", "contact", "evaluation", "development", "production", "release", "growth", "international"] },
+      { key: "status", label: "Stade A&R", type: "select", options: ["discovery", "contact", "evaluation", "development", "production", "release", "growth", "international"] },
+      { key: "verification_status", label: "Verification", type: "select", options: VERIFICATION_OPTIONS },
+      { key: "avatar_url", label: "URL avatar" },
+      { key: "spotify_url", label: "Spotify" },
+      { key: "instagram_url", label: "Instagram" },
+      { key: "youtube_url", label: "YouTube" },
       { key: "bio", label: "Bio", type: "textarea" },
     ]}
   />;

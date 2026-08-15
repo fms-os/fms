@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import api from "../../lib/api";
 import { ArrowRight, ArrowUpRight, Music, Film, Camera, Sparkles, Globe2, Video, Play } from "lucide-react";
 
 const EXPERTISES = [
@@ -11,27 +12,34 @@ const EXPERTISES = [
   { icon: Globe2, title: "DISTRIBUTION", desc: "Distribution digitale, media & liens internationaux.", to: "/services", img: "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1200&q=80" },
 ];
 
-const PROJECTS = [
-  { title: "GOOD MOOD TOUR", subtitle: "DJ Sayd · Tour Caribéen", img: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=1200&q=80" },
-  { title: "CLIP — FREESTYLE", subtitle: "Yannsky · Music Video", img: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1200&q=80" },
-  { title: "C'EST NOUS L'AVENIR", subtitle: "Documentaire · CFA Audiovisuel", img: "https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?w=1200&q=80" },
-  { title: "BRAND FILM", subtitle: "Campagne — Institution culturelle", img: "https://images.unsplash.com/photo-1533488069324-2836ad6f4a68?w=1200&q=80" },
-];
-
 export default function Home() {
+  const [cfg, setCfg] = useState(null);
+  const [projects, setProjects] = useState([]);
+  useEffect(() => {
+    api.get("/public/site-config").then((r) => setCfg(r.data || {})).catch(() => setCfg({}));
+    api.get("/public/projects").then((r) => setProjects(r.data || [])).catch(() => {});
+  }, []);
+  const c = cfg || {};
+  const heroBg = c.hero_image_url || "https://images.unsplash.com/photo-1590201935557-4ede3174758f?w=2400&q=85";
   return (
     <div>
       {/* HERO */}
-      <section className="relative min-h-[100vh] public-hero-bg public-noise flex items-end pb-24 pt-32 overflow-hidden">
+      <section
+        className="relative min-h-[100vh] public-noise flex items-end pb-24 pt-32 overflow-hidden"
+        style={{
+          backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.85) 100%), url(${heroBg})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      >
         <div className="relative z-10 mx-auto max-w-[1400px] w-full px-6 lg:px-10">
-          <div className="public-eyebrow text-white/80 mb-6" data-testid="hero-eyebrow">Factory Maker Studio · Martinique</div>
+          <div className="public-eyebrow text-white/80 mb-6" data-testid="hero-eyebrow">{c.hero_eyebrow || "Factory Maker Studio · Martinique"}</div>
           <h1 className="public-hero-title text-white max-w-5xl" data-testid="hero-title">
-            On construit la culture.<br />
-            <span className="text-[#D4AF37] italic">On construit l'héritage.</span>
+            {c.hero_title_line1 || "On construit la culture."}<br />
+            <span className="text-[#D4AF37] italic">{c.hero_title_line2 || "On construit l'héritage."}</span>
           </h1>
           <p className="mt-8 text-lg text-white/80 max-w-2xl leading-relaxed">
-            Studio de production musicale & audiovisuelle premium. Image cinéma, vision internationale.
-            Ancré dans la Caraïbe, connecté au monde.
+            {c.hero_subtitle || "Studio de production musicale & audiovisuelle. Image cinéma, vision internationale. Ancré dans la Caraïbe, connecté au monde."}
           </p>
           <div className="mt-10 flex flex-wrap gap-3">
             <Link to="/booking" data-testid="hero-cta-book" className="inline-flex items-center gap-2 bg-[#D4AF37] hover:bg-[#c19c2c] text-black px-7 py-3.5 rounded-full text-sm font-medium tracking-wide transition-colors">
@@ -51,6 +59,7 @@ export default function Home() {
             <div>
               <div className="public-eyebrow text-neutral-500 mb-3">01 · Ce qu'on fait</div>
               <h2 className="public-serif text-5xl lg:text-7xl text-neutral-950">Nos expertises.</h2>
+              <p className="text-sm text-neutral-500 mt-3">Illustration des catégories de service — pas des projets spécifiques.</p>
             </div>
             <Link to="/services" className="public-eyebrow text-neutral-950 inline-flex items-center gap-2 hover:gap-3 transition-all">
               Voir tous nos services <ArrowRight size={14} />
@@ -83,16 +92,14 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ABOUT + REALIZATIONS */}
+      {/* ABOUT + optional REALIZATIONS (data-driven, honest empty state) */}
       <section className="bg-white py-24 lg:py-32 px-6 lg:px-10 border-t border-neutral-200">
         <div className="mx-auto max-w-[1400px] grid grid-cols-1 lg:grid-cols-12 gap-12">
           <div className="lg:col-span-4">
             <div className="public-eyebrow text-neutral-500 mb-3">02 · À propos</div>
             <h3 className="public-serif text-4xl lg:text-6xl text-neutral-950 leading-none">Plus qu'un studio,<br /><span className="italic text-[#D4AF37]">un écosystème.</span></h3>
-            <p className="mt-6 text-neutral-600 leading-relaxed">
-              Factory Maker Studio accompagne les artistes, les marques et les créateurs
-              dans la réalisation de leurs projets les plus ambitieux. Basés en Martinique,
-              nous transformons les idées en œuvres et les œuvres en impact.
+            <p className="mt-6 text-neutral-600 leading-relaxed whitespace-pre-line">
+              {c.about_body ? c.about_body.split("\n\n")[0] : "Factory Maker Studio est né à Fort-de-France, en Martinique. Créé en 2022, le studio fait partie de l'écosystème CVLN."}
             </p>
             <Link to="/about" data-testid="about-cta" className="mt-8 inline-flex items-center gap-2 border border-neutral-900 hover:bg-neutral-900 hover:text-white px-6 py-3 rounded-full public-eyebrow transition-colors">
               Découvrir notre histoire <ArrowRight size={14} />
@@ -100,52 +107,49 @@ export default function Home() {
           </div>
           <div className="lg:col-span-8">
             <div className="flex items-center justify-between mb-6">
-              <div className="public-eyebrow text-neutral-500">Réalisations récentes</div>
-              <Link to="/projects" className="public-eyebrow hover:underline">Voir tout →</Link>
+              <div className="public-eyebrow text-neutral-500">Réalisations vérifiées</div>
+              {projects.length > 0 && <Link to="/projects" className="public-eyebrow hover:underline">Voir tout →</Link>}
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              {PROJECTS.map((p) => (
-                <div key={p.title} className="group cursor-pointer">
-                  <div className="relative aspect-[4/3] overflow-hidden rounded-md bg-neutral-100">
-                    <img src={p.img} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center">
-                        <Play size={18} className="ml-0.5 text-neutral-950" fill="currentColor" />
-                      </div>
+            {projects.length === 0 ? (
+              <div data-testid="realizations-empty" className="border border-dashed border-neutral-300 rounded-lg p-12 text-center bg-neutral-50/50">
+                <div className="public-serif text-2xl text-neutral-800 mb-2">Portfolio en construction.</div>
+                <p className="text-sm text-neutral-500 max-w-md mx-auto">Aucune réalisation vérifiée publiée pour le moment. Nous préférons construire des œuvres solides plutôt que remplir un site avec des visuels génériques.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                {projects.slice(0, 4).map((p) => (
+                  <div key={p.id} className="group cursor-pointer">
+                    <div className="relative aspect-[4/3] overflow-hidden rounded-md bg-neutral-100">
+                      {p.cover_url ? <img src={p.cover_url} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" /> : <div className="w-full h-full bg-neutral-200" />}
+                      <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors" />
+                      {p.external_url && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center"><Play size={18} className="ml-0.5 text-neutral-950" fill="currentColor" /></div>
+                        </div>
+                      )}
+                    </div>
+                    <div className="mt-3">
+                      <div className="text-sm font-medium text-neutral-950 uppercase tracking-wide">{p.name}</div>
+                      <div className="text-xs text-neutral-500">{[p.role, p.year].filter(Boolean).join(" · ") || p.type}</div>
                     </div>
                   </div>
-                  <div className="mt-3">
-                    <div className="text-sm font-medium text-neutral-950">{p.title}</div>
-                    <div className="text-xs text-neutral-500">{p.subtitle}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </section>
 
-      {/* PRISMATIC STATS */}
-      <section className="public-prismatic px-6 lg:px-10 py-16 lg:py-20">
-        <div className="mx-auto max-w-[1400px] grid grid-cols-2 lg:grid-cols-5 gap-8 items-center">
-          {[
-            { n: "50+", l: "Artistes accompagnés" },
-            { n: "200+", l: "Projets réalisés" },
-            { n: "15+", l: "Pays touchés" },
-            { n: "10+", l: "Années d'impact culturel" },
-          ].map((s) => (
-            <div key={s.l} className="text-white">
-              <div className="public-serif text-5xl lg:text-6xl">{s.n}</div>
-              <div className="public-eyebrow mt-2 text-white/90">{s.l}</div>
-            </div>
-          ))}
+      {/* FINAL CTA — no invented stats */}
+      <section className="public-prismatic px-6 lg:px-10 py-20">
+        <div className="mx-auto max-w-[1400px] flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
           <div className="text-white">
-            <p className="public-eyebrow text-white/90 mb-3">Vous avez un projet ?</p>
-            <p className="mb-5 text-sm">Parlons-en et construisons quelque chose d'extraordinaire ensemble.</p>
-            <Link to="/start-project" data-testid="prismatic-cta" className="inline-flex items-center gap-2 bg-white text-neutral-950 px-6 py-3 rounded-full public-eyebrow hover:bg-neutral-100 transition-colors">
-              Démarrer un projet <ArrowUpRight size={14} />
-            </Link>
+            <div className="public-eyebrow text-white/90 mb-3">Vous avez un projet ?</div>
+            <div className="public-serif text-4xl lg:text-6xl leading-none">Parlons-en. On construit<br /><span className="italic">quelque chose.</span></div>
+          </div>
+          <div className="flex gap-3">
+            <Link to="/start-project" data-testid="prismatic-cta" className="inline-flex items-center gap-2 bg-white text-neutral-950 px-6 py-3 rounded-full public-eyebrow hover:bg-neutral-100 transition-colors">Démarrer un projet <ArrowUpRight size={14} /></Link>
+            <Link to="/booking" className="inline-flex items-center gap-2 border border-white/70 text-white px-6 py-3 rounded-full public-eyebrow hover:bg-white/10 transition-colors">Réserver le studio</Link>
           </div>
         </div>
       </section>

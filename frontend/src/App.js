@@ -26,6 +26,8 @@ import OSAr from "./pages/os/AR";
 import OSLeads from "./pages/os/Leads";
 import OSIntegrations from "./pages/os/Integrations";
 import OSSettings from "./pages/os/Settings";
+import OSCMS from "./pages/os/CMS";
+import OSNews from "./pages/os/News";
 
 function Protected({ children }) {
   const { user, loading } = useAuth();
@@ -64,6 +66,8 @@ export default function App() {
             <Route path="bookings" element={<OSBookings />} />
             <Route path="ar" element={<OSAr />} />
             <Route path="leads" element={<OSLeads />} />
+            <Route path="cms" element={<OSCMS />} />
+            <Route path="news" element={<OSNews />} />
             <Route path="integrations" element={<OSIntegrations />} />
             <Route path="settings" element={<OSSettings />} />
           </Route>

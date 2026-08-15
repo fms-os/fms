@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { LayoutDashboard, Briefcase, Users, UserCircle, Calendar, Sparkles, Inbox, Plug, Settings, LogOut, Menu, Bell, Search } from "lucide-react";
+import { LayoutDashboard, Briefcase, Users, UserCircle, Calendar, Sparkles, Inbox, Plug, Settings, LogOut, Menu, Bell, Search, FileEdit, Newspaper } from "lucide-react";
 
 const NAV = [
   { to: "/os", end: true, label: "Command Center", icon: LayoutDashboard },
@@ -11,6 +11,8 @@ const NAV = [
   { to: "/os/bookings", label: "Studio & Booking", icon: Calendar },
   { to: "/os/ar", label: "A&R Pipeline", icon: UserCircle },
   { to: "/os/leads", label: "Leads", icon: Inbox },
+  { to: "/os/cms", label: "CMS Site", icon: FileEdit },
+  { to: "/os/news", label: "Actus", icon: Newspaper },
   { to: "/os/integrations", label: "Intégrations", icon: Plug },
   { to: "/os/settings", label: "Paramètres", icon: Settings },
 ];

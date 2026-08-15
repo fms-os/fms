@@ -54,6 +54,24 @@ CVLN Wallet, CVL Brain, Laurentia, Frek-ID) via adapters marked `NOT_CONNECTED`.
   panel), Projects, Artists, Clients, Bookings, A&R Pipeline, Leads, Settings /
   Integrations status.
 
+## Post-MVP Reconciliation (Feb 2026 — iter 2)
+- Removed all invented public claims from Home (`50+/200+/15+/10+` stats + 4 hardcoded
+  realization titles + stock photos labelled as "our studio / our work").
+- Added `verification_status` (UNVERIFIED / CONCEPT / PLANNED / IN_PROGRESS /
+  VERIFIED_CURRENT / VERIFIED_COMPLETED / VERIFIED_RELEASED) + `public` flags on
+  projects, artists; `published` + `verification_status` on news.
+- New filtered public endpoints: `/api/public/projects`, `/api/public/artists`,
+  `/api/public/news`, `/api/public/site-config` — only VERIFIED_* + public/published.
+- New CMS (`/os/cms`) — edits hero, about, studio photo, partners line, footer.
+- New Actus module (`/os/news`) — full CRUD + publish/verify gate.
+- Row-level publish/verify controls on OS Projects and OS Artists tables.
+- All 7 ecosystem adapters enriched with `preview_url`. Status remains
+  `NOT_CONNECTED` (integrate — do not recreate).
+- Public pages now honest empty states: "Portfolio en construction",
+  "Roster en construction", "Photo à venir".
+- Test residues purged. DB is clean : 1 founder + 6 real services + 1 site_config.
+- Added DELETE /os/artists/{id} and filtered archived from GET /os/projects.
+
 ## Prioritized Backlog
 ### P0 (shipped)
 - Auth + role-based session

@@ -113,6 +113,13 @@ ROLES = Literal[
     "finance", "client", "artist", "partner",
 ]
 
+# Verification model (§ post-MVP reconciliation)
+VERIFICATION_STATUSES = [
+    "VERIFIED_COMPLETED", "VERIFIED_RELEASED", "VERIFIED_CURRENT",
+    "IN_PROGRESS", "PLANNED", "CONCEPT", "UNVERIFIED",
+]
+VERIFIED_PUBLIC = {"VERIFIED_COMPLETED", "VERIFIED_RELEASED", "VERIFIED_CURRENT"}
+
 
 class UserPublic(BaseModel):
     id: str
@@ -173,6 +180,32 @@ class ProjectCreate(BaseModel):
     deadline: Optional[str] = None
     budget: Optional[float] = None
     description: Optional[str] = None
+    # Publication & verification (post-MVP reconciliation)
+    public: bool = False
+    verification_status: str = "UNVERIFIED"
+    year: Optional[int] = None
+    role: Optional[str] = None  # FMS role on the project (production, mix, video, DA, etc.)
+    cover_url: Optional[str] = None
+    external_url: Optional[str] = None
+
+
+class ProjectUpdate(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    name: Optional[str] = None
+    type: Optional[str] = None
+    client_id: Optional[str] = None
+    artist_id: Optional[str] = None
+    status: Optional[str] = None
+    start_date: Optional[str] = None
+    deadline: Optional[str] = None
+    budget: Optional[float] = None
+    description: Optional[str] = None
+    public: Optional[bool] = None
+    verification_status: Optional[str] = None
+    year: Optional[int] = None
+    role: Optional[str] = None
+    cover_url: Optional[str] = None
+    external_url: Optional[str] = None
 
 
 class ArtistCreate(BaseModel):
@@ -185,6 +218,29 @@ class ArtistCreate(BaseModel):
     phone: Optional[str] = None
     status: str = "discovery"  # discovery, contact, evaluation, development, production, release, growth, international
     ar_stage: Optional[str] = "discovery"
+    public: bool = False
+    verification_status: str = "UNVERIFIED"
+    avatar_url: Optional[str] = None
+    spotify_url: Optional[str] = None
+    instagram_url: Optional[str] = None
+    youtube_url: Optional[str] = None
+
+
+class ArtistUpdate(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    stage_name: Optional[str] = None
+    genre: Optional[str] = None
+    territory: Optional[str] = None
+    bio: Optional[str] = None
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    status: Optional[str] = None
+    public: Optional[bool] = None
+    verification_status: Optional[str] = None
+    avatar_url: Optional[str] = None
+    spotify_url: Optional[str] = None
+    instagram_url: Optional[str] = None
+    youtube_url: Optional[str] = None
 
 
 class ClientCreate(BaseModel):
@@ -225,6 +281,44 @@ class ServiceCreate(BaseModel):
     visible: bool = True
 
 
+class NewsCreate(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    title: str
+    excerpt: Optional[str] = None
+    body: Optional[str] = None
+    cover_url: Optional[str] = None
+    published: bool = False
+    verification_status: str = "UNVERIFIED"
+    publish_date: Optional[str] = None
+
+
+class NewsUpdate(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    title: Optional[str] = None
+    excerpt: Optional[str] = None
+    body: Optional[str] = None
+    cover_url: Optional[str] = None
+    published: Optional[bool] = None
+    verification_status: Optional[str] = None
+    publish_date: Optional[str] = None
+
+
+class SiteConfigUpdate(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    hero_eyebrow: Optional[str] = None
+    hero_title_line1: Optional[str] = None
+    hero_title_line2: Optional[str] = None
+    hero_subtitle: Optional[str] = None
+    hero_image_url: Optional[str] = None
+    about_headline: Optional[str] = None
+    about_body: Optional[str] = None
+    partners_line: Optional[str] = None
+    studio_photo_url: Optional[str] = None
+    studio_photo_caption: Optional[str] = None
+    footer_tagline: Optional[str] = None
+    show_stats_band: Optional[bool] = None  # off by default post-reconciliation
+
+
 # ---------------------------------------------------------------------------
 # Startup — indexes + admin seed + services seed
 # ---------------------------------------------------------------------------
@@ -234,6 +328,26 @@ async def startup():
     await db.leads.create_index("email")
     await db.bookings.create_index([("date", 1), ("start_time", 1)])
     await db.newsletter.create_index("email", unique=True)
+    await db.news.create_index("publish_date")
+
+    # Seed default site_config only if missing
+    if not await db.site_config.find_one({"id": "default"}):
+        await db.site_config.insert_one({
+            "id": "default",
+            "hero_eyebrow": "Factory Maker Studio · Martinique",
+            "hero_title_line1": "On construit la culture.",
+            "hero_title_line2": "On construit l'héritage.",
+            "hero_subtitle": "Studio de production musicale & audiovisuelle. Image cinéma, vision internationale. Ancré dans la Caraïbe, connecté au monde.",
+            "hero_image_url": "https://images.unsplash.com/photo-1590201935557-4ede3174758f?crop=entropy&cs=srgb&fm=jpg&q=85&w=2400",
+            "about_headline": "Une maison créative caribéenne, internationale.",
+            "about_body": "Factory Maker Studio est né à Fort-de-France, en Martinique. Créé en 2022, le studio fait partie de l'écosystème CVLN — un groupe pensé pour structurer, protéger et faire rayonner les artistes et créateurs de la Caraïbe et de sa diaspora.\n\nNous produisons de la musique, des clips, des films, des documentaires, des campagnes. Nous accompagnons des artistes. Nous formons. Nous exportons.",
+            "partners_line": "",
+            "studio_photo_url": "",
+            "studio_photo_caption": "",
+            "footer_tagline": "On construit la culture.",
+            "show_stats_band": False,
+            "created_at": now_iso(),
+        })
 
     admin_email = os.environ.get("ADMIN_EMAIL", "admin@factorymakerstudio.com").lower()
     admin_password = os.environ.get("ADMIN_PASSWORD", "changeme")
@@ -439,6 +553,42 @@ async def public_booking_request(payload: BookingCreate):
 
 
 # ---------------------------------------------------------------------------
+# Public — FILTERED endpoints (only VERIFIED_* + public=True)
+# ---------------------------------------------------------------------------
+@api.get("/public/projects")
+async def public_projects():
+    cursor = db.projects.find(
+        {"public": True, "verification_status": {"$in": list(VERIFIED_PUBLIC)}, "archived": {"$ne": True}},
+        {"_id": 0}
+    ).sort("year", -1)
+    return await cursor.to_list(200)
+
+
+@api.get("/public/artists")
+async def public_artists():
+    cursor = db.artists.find(
+        {"public": True, "verification_status": {"$in": list(VERIFIED_PUBLIC)}},
+        {"_id": 0}
+    ).sort("stage_name", 1)
+    return await cursor.to_list(200)
+
+
+@api.get("/public/news")
+async def public_news():
+    cursor = db.news.find(
+        {"published": True, "verification_status": {"$in": list(VERIFIED_PUBLIC)}},
+        {"_id": 0}
+    ).sort("publish_date", -1)
+    return await cursor.to_list(200)
+
+
+@api.get("/public/site-config")
+async def public_site_config():
+    doc = await db.site_config.find_one({"id": "default"}, {"_id": 0})
+    return doc or {}
+
+
+# ---------------------------------------------------------------------------
 # OS — protected CRUD
 # ---------------------------------------------------------------------------
 async def _list(collection, limit=500):
@@ -447,7 +597,7 @@ async def _list(collection, limit=500):
 
 @api.get("/os/projects")
 async def list_projects(user=Depends(get_current_user)):
-    return await _list(db.projects)
+    return await db.projects.find({"archived": {"$ne": True}}, {"_id": 0}).sort("created_at", -1).to_list(500)
 
 
 @api.post("/os/projects")
@@ -468,6 +618,19 @@ async def delete_project(project_id: str, user=Depends(get_current_user)):
     return {"ok": True}
 
 
+@api.patch("/os/projects/{project_id}")
+async def update_project(project_id: str, payload: ProjectUpdate, user=Depends(get_current_user)):
+    updates = {k: v for k, v in payload.model_dump().items() if v is not None}
+    if "verification_status" in updates and updates["verification_status"] not in VERIFICATION_STATUSES:
+        raise HTTPException(status_code=400, detail="Invalid verification_status")
+    updates["updated_at"] = now_iso()
+    r = await db.projects.update_one({"id": project_id}, {"$set": updates})
+    if r.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Project not found")
+    doc = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    return doc
+
+
 @api.get("/os/artists")
 async def list_artists(user=Depends(get_current_user)):
     return await _list(db.artists)
@@ -482,6 +645,25 @@ async def create_artist(payload: ArtistCreate, user=Depends(get_current_user)):
     await db.artists.insert_one(doc)
     strip_mongo(doc)
     return doc
+
+
+@api.patch("/os/artists/{artist_id}")
+async def update_artist(artist_id: str, payload: ArtistUpdate, user=Depends(get_current_user)):
+    updates = {k: v for k, v in payload.model_dump().items() if v is not None}
+    if "verification_status" in updates and updates["verification_status"] not in VERIFICATION_STATUSES:
+        raise HTTPException(status_code=400, detail="Invalid verification_status")
+    updates["updated_at"] = now_iso()
+    r = await db.artists.update_one({"id": artist_id}, {"$set": updates})
+    if r.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Artist not found")
+    doc = await db.artists.find_one({"id": artist_id}, {"_id": 0})
+    return doc
+
+
+@api.delete("/os/artists/{artist_id}")
+async def delete_artist(artist_id: str, user=Depends(get_current_user)):
+    await db.artists.delete_one({"id": artist_id})
+    return {"ok": True}
 
 
 @api.get("/os/clients")
@@ -547,6 +729,70 @@ async def create_service(payload: ServiceCreate, user=Depends(get_current_user))
 
 
 # ---------------------------------------------------------------------------
+# News (Actus) — CRUD + publication gate
+# ---------------------------------------------------------------------------
+@api.get("/os/news")
+async def list_news(user=Depends(get_current_user)):
+    return await _list(db.news)
+
+
+@api.post("/os/news")
+async def create_news(payload: NewsCreate, user=Depends(get_current_user)):
+    doc = payload.model_dump()
+    doc["id"] = new_id()
+    doc["created_at"] = now_iso()
+    doc["updated_at"] = now_iso()
+    doc["author_id"] = user["id"]
+    if doc.get("verification_status") not in VERIFICATION_STATUSES:
+        doc["verification_status"] = "UNVERIFIED"
+    await db.news.insert_one(doc)
+    strip_mongo(doc)
+    return doc
+
+
+@api.patch("/os/news/{news_id}")
+async def update_news(news_id: str, payload: NewsUpdate, user=Depends(get_current_user)):
+    updates = {k: v for k, v in payload.model_dump().items() if v is not None}
+    if "verification_status" in updates and updates["verification_status"] not in VERIFICATION_STATUSES:
+        raise HTTPException(status_code=400, detail="Invalid verification_status")
+    updates["updated_at"] = now_iso()
+    r = await db.news.update_one({"id": news_id}, {"$set": updates})
+    if r.matched_count == 0:
+        raise HTTPException(status_code=404, detail="News not found")
+    doc = await db.news.find_one({"id": news_id}, {"_id": 0})
+    return doc
+
+
+@api.delete("/os/news/{news_id}")
+async def delete_news(news_id: str, user=Depends(get_current_user)):
+    await db.news.delete_one({"id": news_id})
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# Site Config — editable content of the public website
+# ---------------------------------------------------------------------------
+@api.get("/os/site-config")
+async def get_site_config(user=Depends(get_current_user)):
+    doc = await db.site_config.find_one({"id": "default"}, {"_id": 0})
+    return doc or {"id": "default"}
+
+
+@api.put("/os/site-config")
+async def update_site_config(payload: SiteConfigUpdate, user=Depends(get_current_user)):
+    updates = {k: v for k, v in payload.model_dump().items() if v is not None}
+    updates["updated_at"] = now_iso()
+    updates["updated_by"] = user["id"]
+    await db.site_config.update_one(
+        {"id": "default"},
+        {"$set": updates, "$setOnInsert": {"id": "default", "created_at": now_iso()}},
+        upsert=True,
+    )
+    doc = await db.site_config.find_one({"id": "default"}, {"_id": 0})
+    return doc
+
+
+# ---------------------------------------------------------------------------
 # Command Center — aggregate KPIs
 # ---------------------------------------------------------------------------
 @api.get("/os/command-center")
@@ -588,6 +834,7 @@ ECOSYSTEM_INTEGRATIONS = [
         "responsibility": "Identity provider — future SSO for FMS OS.",
         "factory_responsibility": "Store external Frek-ID reference on user records.",
         "status": "NOT_CONNECTED",
+        "preview_url": "https://culture-chain.preview.emergentagent.com/",
     },
     {
         "key": "frekcore", "label": "FREKCORE",
@@ -595,6 +842,7 @@ ECOSYSTEM_INTEGRATIONS = [
         "responsibility": "Identity, provenance, attestation, cultural trace (FREK-ID, FREK-Chain).",
         "factory_responsibility": "Send project/work/creator/asset references. Store external IDs only.",
         "status": "NOT_CONNECTED",
+        "preview_url": "https://culture-chain.preview.emergentagent.com/",
     },
     {
         "key": "freakansla", "label": "FREKANSLA",
@@ -602,6 +850,7 @@ ECOSYSTEM_INTEGRATIONS = [
         "responsibility": "Audio creation environment (DAW, plugins, .FK format).",
         "factory_responsibility": "Send project + audio references. Never duplicate DAW logic.",
         "status": "NOT_CONNECTED",
+        "preview_url": "https://frekcore-certify.preview.emergentagent.com/",
     },
     {
         "key": "kora", "label": "KORA",
@@ -609,6 +858,7 @@ ECOSYSTEM_INTEGRATIONS = [
         "responsibility": "Streaming / cultural distribution / audience layer.",
         "factory_responsibility": "Push releases; consume streaming metrics.",
         "status": "NOT_CONNECTED",
+        "preview_url": "https://orbit-connect-15.preview.emergentagent.com/",
     },
     {
         "key": "cvln_wallet", "label": "CVLN Wallet",
@@ -616,6 +866,7 @@ ECOSYSTEM_INTEGRATIONS = [
         "responsibility": "Wallet, transactions, balances, payouts.",
         "factory_responsibility": "Send payment/payout requests. Never store card data.",
         "status": "NOT_CONNECTED",
+        "preview_url": "https://revolut-style-wallet.preview.emergentagent.com/",
     },
     {
         "key": "cvl_brain", "label": "CVL Brain",
@@ -623,6 +874,7 @@ ECOSYSTEM_INTEGRATIONS = [
         "responsibility": "Intelligence, analysis, orchestration.",
         "factory_responsibility": "Send structured operational data. Consume recommendations.",
         "status": "NOT_CONNECTED",
+        "preview_url": "https://agent-factory-68.preview.emergentagent.com/",
     },
     {
         "key": "laurentia", "label": "Laurentia (LLM)",
@@ -630,6 +882,7 @@ ECOSYSTEM_INTEGRATIONS = [
         "responsibility": "Reasoning / LLM layer.",
         "factory_responsibility": "Send structured context via API. Consume answers.",
         "status": "NOT_CONNECTED",
+        "preview_url": "https://emergent-ai-238.preview.emergentagent.com/",
     },
 ]
 

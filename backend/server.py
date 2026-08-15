@@ -319,6 +319,16 @@ class SiteConfigUpdate(BaseModel):
     show_stats_band: Optional[bool] = None  # off by default post-reconciliation
 
 
+class IntegrationConfigUpdate(BaseModel):
+    """Config for a CVLN ecosystem adapter (per-integration). FMS = client of CVLN Gateway."""
+    model_config = ConfigDict(extra="ignore")
+    base_url: Optional[str] = None       # e.g., https://culture-chain.preview.emergentagent.com or the future central Gateway
+    api_key: Optional[str] = None        # stored server-side, never returned in plain
+    entity_id: Optional[str] = None      # our identifier inside CVLN (ex: "labelos", "factory_maker_studio")
+    auth_type: Optional[str] = None      # "api_key" | "bearer" | "mtls" | "none"
+    notes: Optional[str] = None
+
+
 # ---------------------------------------------------------------------------
 # Startup — indexes + admin seed + services seed
 # ---------------------------------------------------------------------------
@@ -889,18 +899,105 @@ ECOSYSTEM_INTEGRATIONS = [
 
 @api.get("/os/integrations")
 async def list_integrations(user=Depends(get_current_user)):
-    # Read status overrides from DB (if any)
-    overrides = {d["key"]: d async for d in db.integration_status.find({}, {"_id": 0})}
+    # Merge base defs with stored configs (base_url, entity_id, last test, api_key mask)
+    configs = {}
+    async for c in db.integration_configs.find({}, {"_id": 0}):
+        configs[c["key"]] = c
     result = []
     for base in ECOSYSTEM_INTEGRATIONS:
-        merged = {**base, **overrides.get(base["key"], {})}
+        cfg = configs.get(base["key"], {})
+        merged = {**base}
+        merged["base_url"] = cfg.get("base_url", "")
+        merged["entity_id"] = cfg.get("entity_id", "")
+        merged["auth_type"] = cfg.get("auth_type", "api_key")
+        merged["notes"] = cfg.get("notes", "")
+        merged["has_api_key"] = bool(cfg.get("api_key"))
+        merged["last_test"] = cfg.get("last_test")
+        last = cfg.get("last_test") or {}
+        if last.get("ok") is True:
+            merged["status"] = "CONNECTED"
+        elif last.get("ok") is False:
+            merged["status"] = "ERROR"
         result.append(merged)
     return result
 
 
+@api.patch("/os/integrations/{key}")
+async def update_integration_config(key: str, payload: IntegrationConfigUpdate, user=Depends(get_current_user)):
+    if key not in {i["key"] for i in ECOSYSTEM_INTEGRATIONS}:
+        raise HTTPException(status_code=404, detail="Unknown integration key")
+    updates = {k: v for k, v in payload.model_dump().items() if v is not None}
+    updates["updated_at"] = now_iso()
+    updates["updated_by"] = user["id"]
+    await db.integration_configs.update_one(
+        {"key": key},
+        {"$set": updates, "$setOnInsert": {"key": key, "created_at": now_iso()}},
+        upsert=True,
+    )
+    await db.audit_log.insert_one({
+        "id": new_id(), "actor_id": user["id"], "actor_email": user["email"],
+        "action": "integration.config.update", "entity": "integration", "entity_id": key,
+        "before": None, "after": {k: ("***" if k == "api_key" else v) for k, v in updates.items()},
+        "timestamp": now_iso(), "source": "os",
+    })
+    doc = await db.integration_configs.find_one({"key": key}, {"_id": 0, "api_key": 0})
+    return doc
+
+
+@api.post("/os/integrations/{key}/test")
+async def test_integration(key: str, user=Depends(get_current_user)):
+    if key not in {i["key"] for i in ECOSYSTEM_INTEGRATIONS}:
+        raise HTTPException(status_code=404, detail="Unknown integration key")
+    cfg = await db.integration_configs.find_one({"key": key}, {"_id": 0})
+    if not cfg or not cfg.get("base_url"):
+        raise HTTPException(status_code=400, detail="base_url not configured")
+    base_url = cfg["base_url"].rstrip("/")
+    api_key = cfg.get("api_key")
+    auth_type = cfg.get("auth_type", "api_key")
+
+    import urllib.request
+    import urllib.error
+    import asyncio
+
+    def do_request():
+        headers = {"User-Agent": "FMS-CVLN-Client/1.0"}
+        if api_key:
+            if auth_type == "bearer":
+                headers["Authorization"] = f"Bearer {api_key}"
+            else:
+                headers["X-API-Key"] = api_key
+        req = urllib.request.Request(base_url + "/", headers=headers, method="GET")
+        try:
+            with urllib.request.urlopen(req, timeout=8) as r:
+                return {"ok": True, "status_code": r.status, "reachable": True, "checked_url": base_url + "/"}
+        except urllib.error.HTTPError as e:
+            return {"ok": e.code < 500, "status_code": e.code, "reachable": True, "checked_url": base_url + "/", "note": e.reason}
+        except Exception as e:
+            return {"ok": False, "reachable": False, "checked_url": base_url + "/", "error": str(e)}
+
+    result = await asyncio.to_thread(do_request)
+    result["tested_at"] = now_iso()
+    result["tested_by"] = user["id"]
+    await db.integration_configs.update_one(
+        {"key": key},
+        {"$set": {"last_test": result, "updated_at": now_iso()}},
+    )
+    await db.audit_log.insert_one({
+        "id": new_id(), "actor_id": user["id"], "actor_email": user["email"],
+        "action": "integration.test", "entity": "integration", "entity_id": key,
+        "before": None, "after": {"ok": result["ok"], "status_code": result.get("status_code")},
+        "timestamp": now_iso(), "source": "os",
+    })
+    return result
+
+
+@api.get("/os/audit-log")
+async def audit_log(limit: int = 100, user=Depends(get_current_user)):
+    return await db.audit_log.find({}, {"_id": 0}).sort("timestamp", -1).to_list(min(limit, 500))
+
+
 @api.get("/public/integrations")
 async def list_integrations_public():
-    # Returns only labels + status, no internal details
     return [{"key": i["key"], "label": i["label"], "status": i["status"]} for i in ECOSYSTEM_INTEGRATIONS]
 
 
@@ -928,3 +1025,4 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+

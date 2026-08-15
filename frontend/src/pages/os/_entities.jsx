@@ -288,32 +288,142 @@ export function Leads() {
 
 export function Integrations() {
   const [items, setItems] = useState([]);
-  useEffect(() => { api.get("/os/integrations").then((r) => setItems(r.data || [])); }, []);
+  const [openKey, setOpenKey] = useState(null);
+  const [drafts, setDrafts] = useState({});
+  const [testing, setTesting] = useState(null);
+  const load = () => api.get("/os/integrations").then((r) => setItems(r.data || [])).catch(() => {});
+  useEffect(() => { load(); }, []);
+  const setDraft = (k, patch) => setDrafts((d) => ({ ...d, [k]: { ...(d[k] || {}), ...patch } }));
+
+  const save = async (key) => {
+    try {
+      await api.patch(`/os/integrations/${key}`, drafts[key] || {});
+      toast.success("Config sauvegardée.");
+      setDrafts((d) => { const { [key]: _, ...rest } = d; return rest; });
+      load();
+    } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); }
+  };
+  const test = async (key) => {
+    setTesting(key);
+    try {
+      const { data } = await api.post(`/os/integrations/${key}/test`);
+      if (data.ok) toast.success(`Reachable (${data.status_code || "?"})`);
+      else toast.error(`Unreachable: ${data.error || data.note || data.status_code}`);
+      load();
+    } catch (e) { toast.error(formatApiError(e.response?.data?.detail)); }
+    finally { setTesting(null); }
+  };
+
+  const statusStyle = (s) => s === "CONNECTED" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+    : s === "ERROR" ? "bg-red-50 text-red-700 border-red-200"
+    : "bg-amber-50 text-amber-700 border-amber-200";
+
   return (
     <div className="space-y-5" data-testid="os-integrations-page">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Intégrations</h1>
-        <p className="text-sm text-neutral-500 mt-1">Écosystème CVLN — adapters préparés, connexions à venir</p>
+        <p className="text-sm text-neutral-500 mt-1">Écosystème CVLN — configurez le Gateway + API key par entité. Aucune connexion sans test réussi.</p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {items.map((i) => (
-          <div key={i.key} data-testid={`integration-card-${i.key}`} className="os-card p-5">
-            <div className="flex items-start justify-between mb-3">
-              <div>
-                <div className="text-lg font-semibold text-neutral-900">{i.label}</div>
-                <div className="os-data-label text-neutral-500">{i.category} · {i.owner}</div>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        {items.map((i) => {
+          const isOpen = openKey === i.key;
+          const draft = drafts[i.key] || {};
+          const cur = { ...i, ...draft };
+          return (
+            <div key={i.key} data-testid={`integration-card-${i.key}`} className="os-card p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <div className="text-lg font-semibold text-neutral-900">{i.label}</div>
+                  <div className="os-data-label text-neutral-500">{i.category} · {i.owner}</div>
+                </div>
+                <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] uppercase tracking-wider border ${statusStyle(i.status)}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${i.status === "CONNECTED" ? "bg-emerald-500" : i.status === "ERROR" ? "bg-red-500" : "bg-amber-500"}`} />
+                  {i.status}
+                </span>
               </div>
-              <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] uppercase tracking-wider ${i.status === "CONNECTED" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${i.status === "CONNECTED" ? "bg-emerald-500" : "bg-amber-500"}`} />
-                {i.status}
-              </span>
+              <div className="space-y-1.5 text-sm">
+                <div><span className="os-data-label">Responsabilité</span><p className="text-neutral-700 mt-0.5 text-[13px] leading-snug">{i.responsibility}</p></div>
+                <div className="grid grid-cols-2 gap-2 text-[12px] pt-2">
+                  <div><span className="os-data-label text-[10px]">Base URL</span><div className="os-mono text-neutral-800 truncate">{i.base_url || "—"}</div></div>
+                  <div><span className="os-data-label text-[10px]">Entity ID</span><div className="os-mono text-neutral-800">{i.entity_id || "—"}</div></div>
+                  <div><span className="os-data-label text-[10px]">API Key</span><div className="os-mono text-neutral-800">{i.has_api_key ? "•••••••" : "—"}</div></div>
+                  <div><span className="os-data-label text-[10px]">Dernier test</span><div className="os-mono text-neutral-800 text-[11px]">{i.last_test?.tested_at ? new Date(i.last_test.tested_at).toLocaleString("fr-FR") : "—"}</div></div>
+                </div>
+                {i.preview_url && !i.base_url && (
+                  <div className="text-[11px] text-neutral-500 pt-1">💡 URL preview écosystème : <a href={i.preview_url} target="_blank" rel="noreferrer" className="text-[#8B5CF6] underline os-mono">{i.preview_url}</a></div>
+                )}
+              </div>
+              <div className="flex items-center gap-2 mt-4">
+                <button onClick={() => setOpenKey(isOpen ? null : i.key)} data-testid={`integration-config-${i.key}`} className="text-xs px-3 py-1.5 rounded border border-neutral-300 hover:bg-neutral-50 transition-colors">
+                  {isOpen ? "Fermer" : "Configurer"}
+                </button>
+                {i.base_url && (
+                  <button onClick={() => test(i.key)} disabled={testing === i.key} data-testid={`integration-test-${i.key}`} className="text-xs px-3 py-1.5 rounded bg-neutral-900 hover:bg-neutral-800 text-white transition-colors">
+                    {testing === i.key ? "…" : "Tester la connexion"}
+                  </button>
+                )}
+              </div>
+              {isOpen && (
+                <div className="mt-4 pt-4 border-t border-neutral-200 space-y-3">
+                  <div>
+                    <label className="os-data-label block mb-1 text-[10px]">Base URL (Gateway CVLN ou URL entité)</label>
+                    <input data-testid={`integration-base-url-${i.key}`} placeholder="https://gateway.cvln.io ou preview URL"
+                      defaultValue={i.base_url || i.preview_url || ""}
+                      onChange={(e) => setDraft(i.key, { base_url: e.target.value })}
+                      className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm os-mono" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="os-data-label block mb-1 text-[10px]">Entity ID</label>
+                      <input data-testid={`integration-entity-id-${i.key}`} placeholder="ex: labelos, factory_maker_studio"
+                        defaultValue={i.entity_id || ""}
+                        onChange={(e) => setDraft(i.key, { entity_id: e.target.value })}
+                        className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm os-mono" />
+                    </div>
+                    <div>
+                      <label className="os-data-label block mb-1 text-[10px]">Auth type</label>
+                      <select data-testid={`integration-auth-${i.key}`}
+                        defaultValue={i.auth_type || "api_key"}
+                        onChange={(e) => setDraft(i.key, { auth_type: e.target.value })}
+                        className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm bg-white">
+                        <option value="api_key">API Key (X-API-Key)</option>
+                        <option value="bearer">Bearer Token</option>
+                        <option value="mtls">mTLS (cert)</option>
+                        <option value="none">Aucune</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="os-data-label block mb-1 text-[10px]">API Key / Bearer secret</label>
+                    <input data-testid={`integration-api-key-${i.key}`} type="password" placeholder={i.has_api_key ? "•••••••• (déjà défini)" : "sk-..."}
+                      onChange={(e) => setDraft(i.key, { api_key: e.target.value })}
+                      className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm os-mono" />
+                  </div>
+                  <div>
+                    <label className="os-data-label block mb-1 text-[10px]">Notes / contrat d'API</label>
+                    <textarea data-testid={`integration-notes-${i.key}`} rows={2}
+                      defaultValue={i.notes || ""}
+                      onChange={(e) => setDraft(i.key, { notes: e.target.value })}
+                      className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm" />
+                  </div>
+                  <button onClick={() => save(i.key)} data-testid={`integration-save-${i.key}`}
+                    className="text-xs px-4 py-2 rounded bg-[#A78BFA] hover:bg-[#8B5CF6] text-black font-medium transition-colors">
+                    Enregistrer
+                  </button>
+                </div>
+              )}
             </div>
-            <div className="space-y-2 text-sm">
-              <div><span className="os-data-label">Responsabilité</span><p className="text-neutral-700 mt-1">{i.responsibility}</p></div>
-              <div><span className="os-data-label">Rôle Factory</span><p className="text-neutral-700 mt-1">{i.factory_responsibility}</p></div>
-            </div>
-          </div>
-        ))}
+          );
+        })}
+      </div>
+      <div className="os-card p-4 border-l-4 border-amber-500">
+        <div className="os-data-label mb-2 text-amber-700">Règles d'or (spec CVLN §5)</div>
+        <ul className="text-sm text-neutral-700 space-y-1 list-disc list-inside">
+          <li>FMS n'est pas le CVLN Brain — FMS est un <strong>client</strong> de l'API Gateway.</li>
+          <li>FMS ne duplique pas M-O : références et synchronisations seulement.</li>
+          <li>Toute retour terrain envoyé vers M-C doit être anonymisé (pas de PII).</li>
+          <li>Aucun statut CONNECTED sans test réussi.</li>
+        </ul>
       </div>
     </div>
   );

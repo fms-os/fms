@@ -1,0 +1,149 @@
+{
+  "project_name": "Factory Maker Studio (FMS)",
+  "shared_brand": {
+    "brand_voice": "Rooted, modern, global, authentic, cultural, creative. Not tropical clichés.",
+    "core_colors": {
+      "gold_accent": "#D4AF37",
+      "amber_accent": "#F59E0B",
+      "dark_foundation": "#0A0A0A"
+    },
+    "integrations": {
+      "auth": "Frek-ID (NOT_CONNECTED state by default)",
+      "llm": "Laurentia (NOT_CONNECTED state by default)"
+    },
+    "motion": {
+      "easing": "cubic-bezier(0.16, 1, 0.3, 1)",
+      "duration": "0.4s",
+      "micro_interactions": "Subtle scale on hover (-translate-y-1), opacity transitions."
+    }
+  },
+  "public_site": {
+    "design_context": "Cinematic, editorial, cultural, Caribbean, international, premium, human, photographic. NOT a dashboard.",
+    "typography": {
+      "headings": {
+        "fontFamily": "'Cormorant Garamond', serif",
+        "weight": "Light to Regular (300-400)",
+        "scale": "text-4xl to text-6xl+",
+        "tracking": "tracking-tighter"
+      },
+      "body": {
+        "fontFamily": "'Outfit', sans-serif",
+        "weight": "Regular (400)",
+        "scale": "text-base to text-lg"
+      },
+      "accent": {
+        "fontFamily": "'Outfit', sans-serif",
+        "weight": "Medium",
+        "scale": "text-xs uppercase tracking-[0.2em]"
+      }
+    },
+    "colors": {
+      "hero_bg": "#0A0A0A",
+      "hero_overlay": "bg-black/40",
+      "text_primary_dark": "#FFFFFF",
+      "text_accent": "#D4AF37",
+      "section_white_bg": "#FFFFFF",
+      "section_text_dark": "#0A0A0A",
+      "prismatic_gradient": "bg-gradient-to-r from-[#FFB800] via-[#FF3B30] to-[#8A2BE2]"
+    },
+    "layout_and_spacing": {
+      "hero": "Full-bleed background image with centered or left-aligned dramatic typography.",
+      "spacing": "Generous (p-12, py-24, gap-12).",
+      "grid": "Bento or asymmetric grids for 'Expertise' and 'Réalisations'."
+    },
+    "components": {
+      "navigation": "Crystal glassmorphism (backdrop-blur-xl bg-black/40 border-b border-white/10).",
+      "expertise_cards": "Minimalist white cards, black text, 1px subtle border, no heavy shadow.",
+      "stats_bar": "Prismatic gradient background, white text, bold typography.",
+      "footer": "Dark foundation, massive typography ('LET'S TALK' or Logo), multi-column links."
+    },
+    "image_urls": {
+      "hero_background": {
+        "url": "https://images.unsplash.com/photo-1590201935557-4ede3174758f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODd8MHwxfHNlYXJjaHwxfHxtYXJ0aW5pcXVlJTIwbGFuZHNjYXBlJTIwc3Vuc2V0fGVufDB8fHx8MTc4NjgwMjU2Nnww&ixlib=rb-4.1.0&q=85",
+        "description": "Martinique authentic landscape sunset (cinematic hero)"
+      },
+      "music_production": {
+        "url": "https://images.unsplash.com/photo-1616588589676-62b3bd4ff6d2?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzZ8MHwxfHNlYXJjaHw0fHxtdXNpYyUyMHByb2R1Y3Rpb24lMjBzdHVkaW98ZW58MHx8fHwxNzg2ODAyNTY2fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Music production studio"
+      },
+      "artist_performance": {
+        "url": "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODR8MHwxfHNlYXJjaHwxfHxhcnRpc3QlMjBwZXJmb3JtaW5nJTIwY29uY2VydHxlbnwwfHx8fDE3ODY4MDI1NjZ8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Artist performing on stage"
+      },
+      "cinematography": {
+        "url": "https://images.unsplash.com/photo-1607276159787-9ef4db5c0d0b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzN8MHwxfHNlYXJjaHwzfHxjaW5lbWF0b2dyYXBoZXIlMjBjYW1lcmElMjBzZXR8ZW58MHx8fHwxNzg2ODAyNTY2fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Cinematographer camera set"
+      }
+    }
+  },
+  "fms_os": {
+    "design_context": "Private operating system. Dense, functional, clarity, information-density, operational control. NOT a marketing site.",
+    "typography": {
+      "fontFamily": "'IBM Plex Sans', sans-serif",
+      "headings": "text-xl to text-3xl, font-semibold, tracking-tight",
+      "body": "text-sm to text-base, clear legibility",
+      "data_labels": "text-xs text-muted-foreground uppercase tracking-wider"
+    },
+    "colors": {
+      "sidebar_bg": "#111111",
+      "sidebar_text": "#A3A3A3",
+      "sidebar_active_bg": "#2E1065",
+      "sidebar_active_text": "#C4B5FD",
+      "main_workspace_bg": "#F9FAFB",
+      "card_bg": "#FFFFFF",
+      "border": "#E5E7EB",
+      "status": {
+        "alert_red": "#EF4444",
+        "warning_orange": "#F59E0B",
+        "not_connected_amber": "#D97706",
+        "not_connected_grey": "#9CA3AF"
+      }
+    },
+    "layout_and_spacing": {
+      "structure": "Fixed dark left sidebar (w-64). Main content area with flex-1 and light background.",
+      "grid": "High density grids (grid-cols-1 md:grid-cols-2 lg:grid-cols-4) for KPIs.",
+      "spacing": "Tight, efficient spacing (p-4, p-6, gap-4).",
+      "cards": "Sharp or subtle radius (rounded-md), 1px borders, subtle or no shadow."
+    },
+    "components": {
+      "kpi_cards": "White background, bordered, containing metric value, label, and minimal trend indicator.",
+      "progress_bars": "Thin (h-2), rounded-full, using brand accent colors.",
+      "alerts": "Muted colored banners with subtle backgrounds (e.g., bg-red-50 text-red-700) for operational warnings.",
+      "a_and_r_pipeline": "Kanban or list view with artist avatar thumbnails.",
+      "donut_chart": "Recharts or Shadcn chart for 'répartition revenus'."
+    },
+    "image_urls": {
+      "artist_avatar_1": {
+        "url": "https://images.unsplash.com/photo-1506863530036-1efeddceb993?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTZ8MHwxfHNlYXJjaHwxfHxjcmVhdGl2ZSUyMGRpcmVjdG9yJTIwcG9ydHJhaXR8ZW58MHx8fHwxNzg2ODAyNTY2fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Artist/Creative portrait"
+      },
+      "artist_avatar_2": {
+        "url": "https://images.unsplash.com/photo-1558730234-d8b2281b0d00?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTZ8MHwxfHNlYXJjaHwzfHxjcmVhdGl2ZSUyMGRpcmVjdG9yJTIwcG9ydHJhaXR8ZW58MHx8fHwxNzg2ODAyNTY2fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Artist/Creative portrait"
+      }
+    }
+  },
+  "instructions_to_main_agent": [
+    "You are building a hybrid app. The routing must clearly split the Public Site (e.g., '/', '/expertises') from the OS (e.g., '/os', '/os/dashboard').",
+    "DO NOT cross-contaminate styles. The Public Site uses Cormorant Garamond and dark/cinematic themes with white editorial blocks. The OS uses IBM Plex Sans and a functional dark-sidebar + light-workspace theme.",
+    "Implement the 'Frek-ID' and 'Laurentia LLM' connections as distinct UI elements showing a 'NOT_CONNECTED' state (gray/amber) in the OS settings/integrations section.",
+    "Ensure the hero overlay on the public site does not exceed bg-black/40 so the cinematic Martinique landscape is visible.",
+    "For the OS, build a dense, data-rich view matching the prompt's mockup description: KPI cards, Agenda, Active Projects with progress bars, Alerts, A&R Pipeline, Revenue donut chart.",
+    "Make sure to use purely real data names (no 'lorem ipsum') for the mock views. Examples: 'Projet XYZ', 'Studio A Booking', etc.",
+    "For icons, use lucide-react (dense/functional in OS, elegant in Public Site)."
+  ],
+  "responsive": {
+    "breakpoint": "Mobile-first approach",
+    "layout": "Public Site: Stack grids on mobile (grid-cols-1), reduce hero font size to text-4xl. OS: Hide sidebar on mobile behind a hamburger menu, stack KPI cards.",
+    "typography": "Fluid scaling. Ensure public site H1 doesn't exceed 4xl on mobile. OS data labels remain readable at text-xs.",
+    "overflow_guard": "Use overflow-x-hidden on the main wrapper. Apply max-w-full to charts.",
+    "tap_targets": "Ensure minimum 44px height for interactive elements on mobile."
+  },
+  "general_ui_ux": [
+    "All interactive and key informational elements MUST include a data-testid attribute.",
+    "Hover states must always be explicitly defined (e.g., hover:bg-gray-100 hover:text-black).",
+    "Avoid generic transitions (no 'transition: all'). Target specific properties like 'transition-colors' or 'transition-transform'.",
+    "Do not use complete transparent background in headers/overlays that have content under it. Use backdrop-blur and semi-transparent colors.",
+    "Ensure accessible contrast ratios, especially over the cinematic hero image (use text shadows if necessary)."
+  ]
+}

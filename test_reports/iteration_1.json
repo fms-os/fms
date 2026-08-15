@@ -1,0 +1,34 @@
+{
+  "summary": "First-finish smoke test of FMS backend + frontend. All critical backend endpoints (public API, auth, OS CRUD, integrations, command-center, AI stub) pass. Frontend public home, CTAs, OS login, sidebar navigation to all 8 OS pages, integrations page (7 NOT_CONNECTED cards), Command Center (INSUFFICIENT_DATA revenue KPI + NOT_CONNECTED chips), and logout all work.",
+  "tested_scope": ["frontend", "backend", "auth", "integration"],
+  "passed": [
+    "GET /api/ returns FMS API metadata (name, version, location, ecosystem)",
+    "GET /api/public/services returns 6 seeded services",
+    "POST /api/public/leads returns 200",
+    "POST /api/public/newsletter twice with same email -> second returns {ok:true, already_subscribed:true}",
+    "POST /api/public/contact returns 200",
+    "POST /api/public/bookings/request creates booking with status=requested",
+    "POST /api/auth/login (founder) returns JWT + role=founder",
+    "GET /api/auth/me returns 401 without token, 200 with Bearer",
+    "POST /api/auth/logout returns 200",
+    "OS endpoints (projects/artists/clients/bookings/integrations/command-center) return 401 without token, 200 with founder token",
+    "POST /api/os/projects, /artists (stage_name), /clients (name+email), /bookings all create successfully",
+    "GET /api/os/integrations returns 7 adapters: frek_id, frekcore, freakansla, kora, cvln_wallet, cvl_brain, laurentia — all NOT_CONNECTED",
+    "GET /api/os/command-center kpis.revenue_mtd.source == INSUFFICIENT_DATA",
+    "POST /api/os/ai/ask returns adapter=laurentia, status=NOT_CONNECTED, answer starts with INSUFFICIENT_DATA",
+    "Public home: hero-title visible, all 8 French nav items present, hero-cta-book -> /booking, hero-cta-project -> /start-project",
+    "OS login with founder redirects to /os; Command Center shows INSUFFICIENT_DATA + NOT_CONNECTED",
+    "Sidebar navigation to /os/projects, /os/artists, /os/clients, /os/bookings, /os/ar, /os/leads, /os/integrations, /os/settings all render without crash",
+    "/os/integrations shows all 7 adapter cards (Frek-ID, FREKCORE, FREKANSLA, KORA, CVLN Wallet, CVL Brain, Laurentia) with NOT_CONNECTED status",
+    "OS logout via [data-testid=os-logout] returns to /os/login"
+  ],
+  "failed": [],
+  "notes": [
+    "OS projects 'Type' select input is marked required with empty default ('—'). Browser validation blocks submit if not selected. Not a bug — expected UX. Backend accepts POST with only name (type defaults to music). Consider setting a default option in UI or removing the required attribute if desired.",
+    "Console 401 errors seen on OS pages are expected during auth transitions/logout and do not affect functionality."
+  ],
+  "action_items": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true
+}
